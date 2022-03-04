@@ -32,7 +32,7 @@ class OrderNick:
 
     def auth_spread(self, table_id):
         scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-        credentials = ServiceAccountCredentials.from_json_keyfile_name('/home/saloman/Documents/Business Automatization/Wildberries(Work)/BOT_finance/Service Accounts/morbot-338716-b219142d9c70.json')
+        credentials = ServiceAccountCredentials.from_json_keyfile_name('Service Accounts/morbot-338716-b219142d9c70.json')
 
         gc = gspread.authorize(credentials)
         spread = gc.open_by_key(table_id)
@@ -197,7 +197,7 @@ class OrderNick:
                         worksheet.update(f'Q{name_row+1}', int(total_num_of_product_bought_out) + int(group_bought_out))
                         worksheet.update(f'R{name_row+1}', int(total_num_of_product_refund) + int(group_refund))
 
-                        print(success_message + 'Нашли артикул ', item)
+                        print(success_message + '\tНашли артикул ', item)
                         return
                         
                 global non_existent_articles
@@ -214,7 +214,7 @@ class OrderNick:
 
 
 def save_table(data, filename):
-    workbook_writer = xlsxwriter.Workbook(filename+'.xlsx')
+    workbook_writer = xlsxwriter.Workbook(filename+'.xls')
     worksheet_writer = workbook_writer.add_worksheet()
 
     for line in range(len(data)):
@@ -261,7 +261,7 @@ def main():
     upload_folder = 'Upload Excel'
     os.makedirs(upload_folder, exist_ok=True)
     for file in os.listdir(upload_folder):
-        if file.endswith('.xlsx'):
+        if file.endswith('.xls'):
             excel_file = os.path.join(upload_folder, file)
             break
     try:
@@ -279,6 +279,7 @@ def main():
         create_non_existent_FILE(non_existent_niks, niks_filename)
         create_non_existent_FILE(non_existent_articles, articles_filename)
 
+        print(warning_message + '\tСоздаем таблицу с исключениями')
         create_non_existent_TABLE(niks_filename, excel_file, colname='nik товара')
         create_non_existent_TABLE(articles_filename, excel_file, colname='Товары')
 
@@ -290,5 +291,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
+    print(success_message + '\tВсе готово!')
