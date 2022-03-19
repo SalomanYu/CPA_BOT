@@ -233,16 +233,20 @@ def create_non_existent_TABLE(non_existent_file, excelfile, colname):
     
     table_titles = sheet_reader.row_values(0)
     for title_col in range(len(table_titles)):
+        if table_titles[title_col] == 'Группа статуса':
+            status_col = title_col
         if table_titles[title_col] == colname:
             products_col = title_col 
             break
     
     res_data = [table_titles, ]
     all_products_in_table = sheet_reader.col_values(products_col)
+    all_status_in_table = sheet_reader.col_values(status_col)
     for product in file:
         for item in range(len(all_products_in_table)):
             if all_products_in_table[item].strip() == product.strip():
-                res_data.append(sheet_reader.row_values(item))
+                if all_status_in_table[item].strip() in ('Возврат', 'Оплачен'):
+                    res_data.append(sheet_reader.row_values(item))
     
     save_table(res_data, non_existent_file)
 
@@ -257,7 +261,6 @@ def create_non_existent_FILE(data, filename):
 
 
 def main():
-    
     upload_folder = 'Upload Excel'
     os.makedirs(upload_folder, exist_ok=True)
     for file in os.listdir(upload_folder):
