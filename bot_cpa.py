@@ -13,7 +13,7 @@ if platform == 'win32':
 
 
 
-success_message = '\033[2;30;42m [SUCCESS] \033[0;0m' 
+SUCCESS_MESSAGE = '\033[2;30;42m [SUCCESS] \033[0;0m' 
 warning_message = '\033[2;30;43m [WARNING] \033[0;0m'
 error_message = '\033[2;30;41m [ ERROR ] \033[0;0m'
 
@@ -31,7 +31,7 @@ class OrderNick:
 
 
     def auth_spread(self, table_id):
-        scope = ['https://www.googletable_titlesapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+        scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
         credentials = ServiceAccountCredentials.from_json_keyfile_name('Service Accounts/morbot-338716-b219142d9c70.json')
 
         gc = gspread.authorize(credentials)
@@ -133,7 +133,7 @@ class OrderNick:
                         worksheet.update(f'J{name_row+1}', int(total_number_of_orders_IN_WAY_value) + int(group_in_way))
                         worksheet.update(f'K{name_row+1}', int(total_number_of_orders_BOUGHT_OUT_value) + int(group_bought_out))
                         worksheet.update(f'L{name_row+1}', int(total_number_of_orders_REFUND_value) + int(group_refund))
-                        print(success_message + '\tНайден товар ', item.lower())
+                        print(SUCCESS_MESSAGE + '\tНайден товар ', item.lower())
                         count -= 1
                         return
                 global non_existent_niks
@@ -197,7 +197,7 @@ class OrderNick:
                         worksheet.update(f'Q{name_row+1}', int(total_num_of_product_bought_out) + int(group_bought_out))
                         worksheet.update(f'R{name_row+1}', int(total_num_of_product_refund) + int(group_refund))
 
-                        print(success_message + 'Нашли артикул ', item)
+                        print(SUCCESS_MESSAGE + '\tНашли артикул ', item)
                         return
                         
                 global non_existent_articles
@@ -214,7 +214,7 @@ class OrderNick:
 
 
 def save_table(data, filename):
-    workbook_writer = xlsxwriter.Workbook(filename+'.xlsx')
+    workbook_writer = xlsxwriter.Workbook(filename+'.xls')
     worksheet_writer = workbook_writer.add_worksheet()
 
     for line in range(len(data)):
@@ -233,19 +233,20 @@ def create_non_existent_TABLE(non_existent_file, excelfile, colname):
     
     table_titles = sheet_reader.row_values(0)
     for title_col in range(len(table_titles)):
+        if table_titles[title_col] == 'Группа статуса':
+            status_col = title_col
         if table_titles[title_col] == colname:
             products_col = title_col 
             break
     
     res_data = [table_titles, ]
     all_products_in_table = sheet_reader.col_values(products_col)
+    all_status_in_table = sheet_reader.col_values(status_col)
     for product in file:
         for item in range(len(all_products_in_table)):
             if all_products_in_table[item].strip() == product.strip():
-                res_data.append(sheet_reader.row_values(item))
-            # elif len(all_products_in_table[item].strip()) < 2:
-                # res_data.append(sheet_reader.row_values(item))
-
+                if all_status_in_table[item].strip() in ('Возврат', 'Оплачен'):
+                    res_data.append(sheet_reader.row_values(item))
     
     save_table(res_data, non_existent_file)
 
@@ -260,11 +261,10 @@ def create_non_existent_FILE(data, filename):
 
 
 def main():
-    
     upload_folder = 'Upload Excel'
     os.makedirs(upload_folder, exist_ok=True)
     for file in os.listdir(upload_folder):
-        if file.endswith('.xlsx'):
+        if file.endswith('.xls'):
             excel_file = os.path.join(upload_folder, file)
             break
     try:
@@ -282,6 +282,7 @@ def main():
         create_non_existent_FILE(non_existent_niks, niks_filename)
         create_non_existent_FILE(non_existent_articles, articles_filename)
 
+        print(warning_message + '\tСоздаем таблицу с исключениями')
         create_non_existent_TABLE(niks_filename, excel_file, colname='nik товара')
         create_non_existent_TABLE(articles_filename, excel_file, colname='Товары')
 
@@ -293,5 +294,5 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
+    print(SUCCESS_MESSAGE + '\tВсе готово!')
+    # 11.04.2022
