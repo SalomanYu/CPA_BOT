@@ -264,7 +264,7 @@ def main():
     upload_folder = 'Upload Excel'
     os.makedirs(upload_folder, exist_ok=True)
     for file in os.listdir(upload_folder):
-        if file.endswith('.xls'):
+        if file.endswith('.xlsx'):
             excel_file = os.path.join(upload_folder, file)
             break
     try:
