@@ -65,7 +65,7 @@ class OrderNick:
         group_refund = 0
 
         for row_num in range(self.sheet_reader.nrows):
-            if item in self.sheet_reader.row_values(row_num):
+            if item.strip() in self.sheet_reader.row_values(row_num):
                 if self.sheet_reader.cell(row_num, group_status_col).value == 'Ошибка/Спам/Дубль':
                     spam_group += 1
                 elif self.sheet_reader.cell(row_num, group_status_col).value in ('Оплачен', 'Отправлен', 'Принят', 'Возврат'):
@@ -112,7 +112,7 @@ class OrderNick:
             try:
                 count = len(order_names)
                 for name_row in range(len(order_names)):
-                    if item in [i.strip() for i in order_names[name_row].split('\n')]:
+                    if item.strip() in [i.strip() for i in order_names[name_row].split('\n')]:
                         
                         total_number_of_orders_value = worksheet.acell(f'E{name_row+1}').value if worksheet.acell(f'E{name_row+1}').value != None else 0
                         total_number_of_orders_IN_PROCCESING_value = worksheet.acell(f'F{name_row+1}').value if worksheet.acell(f'F{name_row+1}').value != None else 0
@@ -138,6 +138,7 @@ class OrderNick:
                         return
                 global non_existent_niks
                 non_existent_niks.append(item)
+                print('Не найден ', item)
             # except BaseException:
             #     print(item)
 
@@ -170,7 +171,7 @@ class OrderNick:
         group_refund = 0
         group_bought_out = 0
         for row_num in range(self.sheet_reader.nrows):
-            if item in self.sheet_reader.row_values(row_num):
+            if item.strip() in self.sheet_reader.row_values(row_num):
                 if self.sheet_reader.cell(row_num, articles_status_col).value == 'Оплачен':
                     group_bought_out += 1
                 elif self.sheet_reader.cell(row_num, articles_status_col).value == 'Возврат':
@@ -244,7 +245,7 @@ def create_non_existent_TABLE(non_existent_file, excelfile, colname):
     all_status_in_table = sheet_reader.col_values(status_col)
     for product in file:
         for item in range(len(all_products_in_table)):
-            if all_products_in_table[item].strip() == product.strip():
+            if all_products_in_table[item] == product.strip():
                 if all_status_in_table[item].strip() in ('Возврат', 'Оплачен'):
                     res_data.append(sheet_reader.row_values(item))
     
@@ -253,6 +254,7 @@ def create_non_existent_TABLE(non_existent_file, excelfile, colname):
 
 
 def create_non_existent_FILE(data, filename):
+    print(len(data))
     if len(data) > 0:
         file = open(f'{filename}.txt', 'a')
         for item in data:
