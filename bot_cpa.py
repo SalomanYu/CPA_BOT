@@ -36,7 +36,7 @@ class  CPA:
         try:
             excel_file = self.extract_excel_file()
         except UnboundLocalError:
-            print(ERROR_MESSAGE'\t В папке Upload не найдено ни одного файла с расширением .xlsx')
+            print(ERROR_MESSAGE+'\t В папке Upload не найдено ни одного файла с расширением .xlsx')
             return
         self.all_niks, self.all_articles = self.collect_all_niks_and_articles(excel_file)
 
@@ -79,8 +79,14 @@ class  CPA:
         upload_folder = 'Upload'
         os.makedirs(upload_folder, exist_ok=True)
         for file in os.listdir(upload_folder):
+            full_path = os.path.join(upload_folder, file)
             if file.endswith('.xlsx'):
-                excel_file = os.path.join(upload_folder, file)
+                excel_file = full_path
+            elif file.endswith('.xls'):
+                new_filename = os.path.join(upload_folder, file.split('.')[0] + '.xlsx')
+                os.rename(full_path, new_filename)
+                excel_file = os.path.join(upload_folder, new_filename)
+                print(WARNING_MESSAGE+'\t Поменяли расширение excel файла')
         print(SUCCESS_MESSAGE+'\t Нашли таблицу с исходными значениями из папки ',  upload_folder)
         return excel_file 
 
