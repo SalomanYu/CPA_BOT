@@ -28,9 +28,9 @@ class  CPA:
     
     def run(self):
         # 1. Скачиваем содержимое определенной таблицы
-        spread = self.auth_spread(self.google_sheet_id)
-        self.worksheet = spread.get_worksheet(6)
-        self.download_sheet(self.worksheet)
+        # spread = self.auth_spread(self.google_sheet_id)
+        # self.worksheet = spread.get_worksheet(6)
+        # self.download_sheet(self.worksheet)
 
         # 2. Собираем необходимые данные из вводного excel-файла
         try:
@@ -40,10 +40,10 @@ class  CPA:
             return
         self.all_niks, self.all_articles = self.collect_all_niks_and_articles(excel_file)
 
-        self.articles_with_status = self.get_articlles_with_statuses(list(set(self.all_articles)))
-        self.find_all_articles_in_sheet(self.articles_with_status)
+        all_products = self.collect_all_articles()
+        self.find_all_articles_in_sheet(all_products)
         self.create_non_existent_FILE(data=self.NONE_EXIST_ARTICLES, filename='NONE ARTICLES')
-        self.create_non_existent_TABLE('NONE ARTICLES',  self.nik_col)
+        self.create_non_existent_TABLE('NONE ARTICLES',  self.article_col)
         
         #niks
         freq_niks = self.get_freq_dict(self.all_niks)
@@ -79,14 +79,8 @@ class  CPA:
         upload_folder = 'Upload'
         os.makedirs(upload_folder, exist_ok=True)
         for file in os.listdir(upload_folder):
-            full_path = os.path.join(upload_folder, file)
             if file.endswith('.xlsx'):
-                excel_file = full_path
-            elif file.endswith('.xls'):
-                new_filename = os.path.join(upload_folder, file.split('.')[0] + '.xlsx')
-                os.rename(full_path, new_filename)
-                excel_file = os.path.join(upload_folder, new_filename)
-                print(WARNING_MESSAGE+'\t Поменяли расширение excel файла')
+                excel_file = os.path.join(upload_folder, file)
         print(SUCCESS_MESSAGE+'\t Нашли таблицу с исходными значениями из папки ',  upload_folder)
         return excel_file 
 
@@ -210,54 +204,15 @@ class  CPA:
         print(SUCCESS_MESSAGE+f'\t Собрали всю информацию по статусам ника: {item} ')
         return spam_group, cancel_group, sent_group, processing_group, group_in_way, group_bought_out, group_refund
 
-    def get_articlles_with_statuses(self, data):
-        result = {}
-        for article in data:
-            bought_out = 0
-            refund = 0
-            for item_num in range(self.sheet_reader.nrows):
-                row = self.sheet_reader.row_values(item_num)
-                if row[self.article_col] == article and article != '':
-                    if row[self.group_status_col] == 'Оплачен':
-                        bought_out += 1
-                    elif row[self.group_status_col] == 'Возврат':
-                        refund += 1
-                result[article] = {
-                    'Оплачен': bought_out,
-                    'Возврат': refund
-                }
-        return result
+    def collect_all_articles(self):
+        for title_num in range(len(self.table_titles)):
+            if self.table_titles[title_num] == 'Товары':
+                col_num = title_num
+                break
+        all_products = list(set(self.sheet_reader.col_values(col_num)[1:]))
+        
+        return all_products
 
-    def find_all_articles_in_sheet(self, data):
-        arc_col = self.worksheet.find('Артикул').col
-        self.google_all_articles = self.worksheet.col_values(arc_col)
-        for item in data: #
-                if item != ' ':
-                    print(WARNING_MESSAGE + '\t Пробуем найти артикул ', item)
-                    self.try_write_article(item)
-                    # break
-
-    def try_write_article(self, item):
-        try:
-            for name_row in range(len(self.google_all_articles)):
-                if self.google_all_articles[name_row] == item:
-                    total_num_of_product_bought_out = self.worksheet.acell(f'Q{name_row+1}').value if self.worksheet.acell(f'Q{name_row+1}').value != None else 0
-                    total_num_of_product_refund = self.worksheet.acell(f'R{name_row+1}').value if self.worksheet.acell(f'R{name_row+1}').value != None else 0
-
-                    group_refund, group_bought_out = self.articles_with_status[item]['Возврат'], self.articles_with_status[item]['Оплачен']
-                    self.worksheet.update(f'Q{name_row+1}', int(total_num_of_product_bought_out) + int(group_bought_out))
-                    self.worksheet.update(f'R{name_row+1}', int(total_num_of_product_refund) + int(group_refund))
-
-                    print(SUCCESS_MESSAGE + '\t Нашли артикул ', item)
-                    return
-                    
-            print(ERROR_MESSAGE + '\t Не удалось найти артикул ', item)
-            self.NONE_EXIST_ARTICLES.append(item)
-
-        except gspread.exceptions.APIError:
-            print(ERROR_MESSAGE+'\t Бот умер')
-            time.sleep(31)
-            self.try_write_article(item)
 
     def collect_articles_status(self, item):
         for title_num in range(len(self.table_titles)):
@@ -274,6 +229,38 @@ class  CPA:
                     group_refund += 1
         return group_refund, group_bought_out
 
+
+    def find_all_articles_in_sheet(self, data):
+        spread = self.auth_spread(self.google_sheet_id)
+        worksheet = spread.get_worksheet(6)
+        arc_col = worksheet.find('Артикул').col
+        all_products_arcs = worksheet.col_values(arc_col)
+        
+        def try_write(item):
+            if item == '':
+                return
+            try:
+                for name_row in range(len(all_products_arcs)):
+                    if all_products_arcs[name_row].strip() == item.strip():
+                        total_num_of_product_bought_out = worksheet.acell(f'Q{name_row+1}').value if worksheet.acell(f'Q{name_row+1}').value != None else 0
+                        total_num_of_product_refund = worksheet.acell(f'R{name_row+1}').value if worksheet.acell(f'R{name_row+1}').value != None else 0
+
+                        group_refund, group_bought_out = self.collect_articles_status(item)
+                        worksheet.update(f'Q{name_row+1}', int(total_num_of_product_bought_out) + int(group_bought_out))
+                        worksheet.update(f'R{name_row+1}', int(total_num_of_product_refund) + int(group_refund))
+
+                        print(SUCCESS_MESSAGE + 'Нашли артикул ', item)
+                        return
+                        
+                self.NONE_EXIST_ARTICLES.append(item)
+
+            except gspread.exceptions.APIError:
+                print('Бот умер')
+                time.sleep(31)
+                try_write(item)
+        for item in data:
+            try_write(item)
+
     def create_non_existent_FILE(self, data,  filename):
             file = open(f'Result/{filename}.txt', 'w')
             for item in data:
@@ -282,19 +269,17 @@ class  CPA:
 
     def create_non_existent_TABLE(self, non_existent_file, col):
         file = open("Result/"+non_existent_file+'.txt')
-        
         res_data = [self.table_titles, ]
-        all_products_in_table = self.sheet_reader.col_values(col)
-        for item in range(len(all_products_in_table)):
-            if all_products_in_table[item] == '':
-                res_data.append(self.sheet_reader.row_values(item))
+        all_products_in_table = self.sheet_reader.col_values(col)        
         for product in file:
-            for item in range(len(all_products_in_table)):
-                if all_products_in_table[item].strip() == product.strip():
-
+            for item in range(len(all_products_in_table)): # len(all_products_in_table)
+                if all_products_in_table[item].strip() == product.strip():            
                     # if all_status_in_table[item].strip() in ('Возврат', 'Оплачен'):
                     res_data.append(self.sheet_reader.row_values(item))
-        
+
+        for item in range(len(all_products_in_table)):
+            if len(all_products_in_table[item]) == 0:
+                res_data.append(self.sheet_reader.row_values(item))
         self.save_table(res_data, non_existent_file)
 
     def save_table(self, data, filename):
